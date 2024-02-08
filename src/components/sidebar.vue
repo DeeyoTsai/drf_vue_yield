@@ -1,6 +1,6 @@
 <template>
     <!-- Side bar -->
-    <div class=" w-[400px] h-full bg-gray-200 text-white" id="side-bar" :class="dataOpenSideBar == true ? 'side-bar-visible' : 'side-bar-close'">
+    <div class=" w-[400px] h-full bg-gray-800 text-white" id="side-bar" :class="dataOpenSideBar == true ? 'side-bar-visible' : 'side-bar-close'">
         <div class="h-[50px] bg-gray-900">
             <div class="px-[20px] py-[10px]">
                 <div v-if="dataOpenSideBar"  class="font-bold text-2xl">

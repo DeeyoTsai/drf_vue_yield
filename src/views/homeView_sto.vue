@@ -18,9 +18,9 @@
         <div class="h-50 flex py-1">
             <div class="w-1/2 ">
                 <div class="mb-1 border border-gray-600">
-                    <h5 class="text-xl font-bold bg-emerald-300">當日前五大(update:{{ updated_at.value }})</h5>
+                    <h5 class="text-xl font-bold bg-cyan-400">當日前五大(update:{{ updated_at.value }})</h5>
                     <!-- <h5 v-else="allTopFive.length > 0" class="text-xl font-bold bg-cyan-400">當日前五大(No Data)</h5> -->
-                    <DataTable :value="ALLtopfive.data" showGridlines :size="'small'" tableStyle="min-width: 10rem; " >
+                    <DataTable :value="allTopFive" showGridlines :size="'small'" tableStyle="min-width: 10rem; " >
                         <Column field="stop" header="站別"></Column>
                         <Column field="dfcode" header="Defect code"></Column>
                         <Column field="quantity" header="Qty"></Column>
@@ -30,19 +30,12 @@
             </div>
             <div class="w-1/2 pl-2">
                 <div class="mb-1 border border-gray-600">
-                    <h5 class="text-xl font-bold bg-emerald-300">RGB良率日報(update:{{ updated_at }})</h5>
-                    <DataTable :value="RGBtopfive.data" showGridlines :size="'small'" 
-                        v-model:selection="selectedRGBitem" selectionMode="single" 
-                        :metaKeySelection="false"
-                        @rowSelect="onRowSelect" 
-                        @rowUnselect="onRowUnselect"
-                        tableStyle="min-width: 10rem border"
-                    >
+                    <h5 class="text-xl font-bold bg-cyan-400">RGB良率日報(update:{{ updated_at.value }})</h5>
+                    <DataTable :value="tf" showGridlines :size="'small'" tableStyle="min-width: 10rem border">
                         <Column field="dfcode" header="Defect code"></Column>
                         <Column field="quantity" header="Qty"></Column>
                         <Column field="ratio" header="全良佔有率"></Column>
                     </DataTable>
-                    <Toast />
                 </div>
             </div>
         </div>
@@ -69,13 +62,12 @@
         </div>
 
         <div class=" px-3 py-3 w-full h-full mb-2 border rounded-lg">
-            <!-- 顯示GlassTable -->
-            <!-- <GlassTable :glassInfo="selectedRGBitem"/> -->
+            <!-- 顯示圖片 -->
             <GlassTable/>
         </div>
         <div class="px-3 py-3 mb-2 border rounded-lg">
             <!-- ADI各站檢出點數，同AOI Defect Analysis  -->
-            <div >
+            <div class="px-1 ">
                 <AdiHistory :data="products"/>
             </div>                  
         </div>        
@@ -123,108 +115,40 @@
     import GalleryImg from '@/components/GalleryImg.vue';
     import TrendChartImg from '@/components/TrendChartImg.vue';
     import AdiHistory from '@/components/AdiHistory.vue';
-    import { userowClickStore } from '@/stores/rowClick'
-    import { onBeforeMount, onMounted, onActivated, reactive, ref, toRaw } from 'vue';
+    import { useYieldStore } from '@/stores/yield';
+    import { onBeforeMount,onMounted,onActivated,reactive,ref,toRaw } from 'vue';
+    import { storeToRefs } from 'pinia';
+    import sidebar from '@/components/sidebar.vue';
 
-    import axios from 'axios';
-    import { useToast } from 'primevue/usetoast'
-
-    const store = userowClickStore();
-    const { getRowData, getGinfo } = store;
-
+    const userStore = useYieldStore()
     const products = ref([]);
     const date = ref('');
     const updated_at = ref('');
-    // const { RGBtopfive, ALLtopfive } = storeToRefs(userStore);
-    // const { getTopfive } = userStore;
-    const today = new Date().toISOString().slice(0, 10);
-    const STATES = {
-        INIT:0,
-        DONE:1,
-        WIP:2,
-        ERROR:3
-    };
-    const RGBtopfive = ref({});
-    const ALLtopfive = ref({});
+    const tf = ref([]);
+    const allTopFive = ref([]);
+    const { RGBtopfive, ALLtopfive } = storeToRefs(userStore);
+    const { getTopfive } = userStore;
     const RGBtopfiveUrl = '/api/rgbtopfive/';
     const ALLtopfiveUrl = '/api/topFive/';
-    // RGBtopFive Table Select
-    const selectedRGBitem = ref();
-    const toast = useToast()
-    // RGB Top Five row select event
-    const onRowSelect = (event) => {
-        selectedRGBitem.value = event.data;
-        getRowData(selectedRGBitem);
-        getGinfo()
-        console.log(selectedRGBitem.value.url);
-        toast.add({ severity:'success', summary: 'Defect Code Selected: ', detail: 'Defect code: ' + event.data.dfcode, life:1000 });
-    };
-    // RGB Top Five row unselect event
-    const onRowUnselect = (event) => {
-        toast.add({ severity: 'warn', summary: 'Defect Code Unselected: ', detail: 'Defect code: ' + event.data.dfcode, life: 1000 });
 
-    };
 
-    // 當日前五大、RGB良率日報，axios 從backend get data
-    const loadData = async (url)=>{
-        const status = ref(STATES.INIT);
-        const data = ref();
-        try{
-            status.value = STATES.WIP;
-            const res = await axios.get(url, {
-                params:{
-                    day:'2023-12-26'  // which_date替換today
-                },
-            });
-            data.value = res.data.results;
-            status.value = STATES.DONE;
-            console.log(url, '--> get data status:', status.value);
-            return  { status:status, data:data }
-        } catch (e){
-            status.value = STATES.ERROR;
-            console.log('error:', e);
-        }
-    };
-    // 全良佔有率 float --> 百分比
-    const ratioToPercent = (data) => {
-        const newdata = {...data, data:[...(data.data.value)].map((d) => {
-            d.ratio = (d.ratio * 100).toFixed(2) + " %";
-            return d
-            })
-        };
-        return newdata
-    };
 
-    onMounted(async () => {
+    getTopfive(RGBtopfiveUrl);
+    getTopfive(ALLtopfiveUrl);
+    // tf.value = toRaw(RGBtopfive.value).dt.results;
+    // allTopFive.value = toRaw(ALLtopfive.value).dt.results;
+    // onBeforeMount(()=>{
+    //     getTopfive(RGBtopfiveUrl);
+    //     getTopfive(ALLtopfiveUrl);
+    // })
+    onMounted(()=>{
         // userStore.getTopFive();
         // async function getTopfive(RGBtopfiveUrl){
-        // RGBtopfive.value = await loadData(RGBtopfiveUrl);
-        // 取得當日前五大資料
-        await loadData(RGBtopfiveUrl).then((data) => {
-            RGBtopfive.value = ratioToPercent(data)
-        });
-        // console.log(RGBtopfive);  
-        // Print array in console log
-        // console.log(toRaw(RGBtopfive.value.data));   //[{…}, {…}, {…}, {…}]
-        // ALLtopfive.value = await loadData(ALLtopfiveUrl);
-        // 取得RGB前五大資料
-        await loadData(ALLtopfiveUrl).then((data) => {
-            ALLtopfive.value = ratioToPercent(data)
-        });
-        // console.log(ALLtopfive); 
-        
-        // getTopfive(RGBtopfiveUrl, RGBtopfive);
-
-        // getTopfive(ALLtopfiveUrl, ALLtopfive);
-        // console.log(ALLtopfive);
-
-        // console.log('RGBtopfive',RGBtopfive);
-        // tf.value = toRaw(RGBtopfive.value).dt.results;
-        // console.log(tf);
+        tf.value = toRaw(RGBtopfive.value).dt.results;
         // };
         
         // async function getTopfive(ALLtopfiveUrl){
-        // allTopFive.value = toRaw(ALLtopfive.value).dt.results;
+        allTopFive.value = toRaw(ALLtopfive.value).dt.results;
         // };
 
         // getTopfive(ALLtopfiveUrl);
@@ -235,8 +159,6 @@
         
     })    
     
-
-
     function getData() {
         console.log("test btn");
         
@@ -272,24 +194,7 @@
                 },
             ]
     };
-    // function getTopfive(url, obj, which_date=today) {
-    //     // obj.state = STATES.WIP
-    //     axios.get(url,{
-    //             params:{
-    //                 day:'2023-12-26'// which_date替換2023-11-28
-    //             }
-    //         })
-    //         .then(response => {
-    //             obj = response.data
-    //             console.log(obj);
-    //             // obj.state = STATES.DONE
-    //         })
-    //         .catch(error => {
-    //             console.log('error', error);
-    //         })     
-        
-    // };           
-    
+
 
 </script>
 

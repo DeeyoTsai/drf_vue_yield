@@ -1,5 +1,7 @@
 <template>
   <div class="defectScatter">
+    {{ selectedRow == null ? '{}' : selectedRow.url}}
+    <!-- {{ selectedGinfoRows }} -->
     <apexchart
       
       height="500"
@@ -11,11 +13,15 @@
 </template>
 <script>
 /* eslint-disable */
+import { userowClickStore } from '@/stores/rowClick.js'
+import { mapState, mapActions } from 'pinia';
+import axios from 'axios';
 
 export default {
   name: "ScatterChart",
   data: function() {
     return {
+      fetchedData: {},
       chartOptions: {
         chart: {
               height: 350,
@@ -25,31 +31,115 @@ export default {
                 type: 'xy'
               }
         },
+        tooltip: {
+          // custom: function({series, seriesIndex, dataPointIndex, w}) {
+          //   return '<div class="arrow_box">' +
+          //     '<span>' + series[seriesIndex] + '</span>' +
+          //     '</div>'
+          // }
+          x:{
+
+            
+          },
+          
+        },
+        states: {
+            normal: {
+                filter: {
+                    type: 'none',
+                    value: 0,
+                }
+            },
+            hover: {
+                filter: {
+                    type: 'lighten',
+                    value: 0.15,
+                }
+            },
+            active: {
+                allowMultipleDataPointsSelection: false,
+                filter: {
+                    type: 'darken',
+                    value: 0.35,
+                }
+            },
+        },
         xaxis: {
-              tickAmount: 10,
+              tickAmount: 13,
+              min:0,
+              max:1300,
+              tooltip:{
+                enabled:true
+              },
               labels: {
                 formatter: function(val) {
                   return parseFloat(val).toFixed(1)
                 }
-              }
+              },
+              
         },
         yaxis: {
-              tickAmount: 7
-            }
-      },
-      series: [
-        {
-          name: "SAMPLE A",
-            data: [
-            [16.4, 5.4], [21.7, 2], [25.4, 3], [19, 2], [10.9, 1], [13.6, 3.2], [10.9, 7.4], [10.9, 0], [10.9, 8.2], [16.4, 0], [16.4, 1.8], [13.6, 0.3], [13.6, 0], [29.9, 0], [27.1, 2.3], [16.4, 0], [13.6, 3.7], [10.9, 5.2], [16.4, 6.5], [10.9, 0], [24.5, 7.1], [10.9, 0], [8.1, 4.7], [19, 0], [21.7, 1.8], [27.1, 0], [24.5, 0], [27.1, 0], [29.9, 1.5], [27.1, 0.8], [22.1, 2]]
+              tickAmount: 11,
+              min:0,
+              max:1100,
+
         },
-        {
-          name: "SAMPLE B",
-          data: [
-            [36.4, 13.4], [1.7, 11], [5.4, 8], [9, 17], [1.9, 4], [3.6, 12.2], [1.9, 14.4], [1.9, 9], [1.9, 13.2], [1.4, 7], [6.4, 8.8], [3.6, 4.3], [1.6, 10], [9.9, 2], [7.1, 15], [1.4, 0], [3.6, 13.7], [1.9, 15.2], [6.4, 16.5], [0.9, 10], [4.5, 17.1], [10.9, 10], [0.1, 14.7], [9, 10], [12.7, 11.8], [2.1, 10], [2.5, 10], [27.1, 10], [2.9, 11.5], [7.1, 10.8], [2.1, 12]]
-        }
-      ]
+
+      },
+
+      series: []
     };
-  }
+  },
+  methods:{
+    dataToChart(dt) {
+      let pd_array = [];
+      let dataForSeries = [];
+
+      let formattedData = dt.map((e, i) =>{
+        if (!(pd_array.includes(e.product))) {
+          let pd_obj = {
+            name:'',
+            data:[]
+          };
+          console.log('push product', e.product);
+          pd_array.push(e.product);
+          pd_obj.name = e.product;
+          let xpos = e.xpos/1000
+          let ypos = parseFloat(e.ypos/1000).toFixed(1)
+          pd_obj.data.push([xpos, ypos]);
+          dataForSeries.push(pd_obj);
+          // console.log(dataForSeries);
+        }
+        else {
+          dataForSeries.forEach((elem, j) => {
+            // console.log(elem);
+            // console.log(j);
+            if (e.product == elem.name){
+              // console.log('already have product');
+              // console.log(dataForSeries[j]);
+              let xpos = e.xpos/1000
+              let ypos = parseFloat(e.ypos/1000).toFixed(1)
+              dataForSeries[j].data.push([xpos, ypos])
+            }
+          }); 
+        }
+      })
+      return dataForSeries;
+      // console.log(pd_array);
+      
+    },  
+  },
+  computed:{
+    ...mapState(userowClickStore, ['selectedRow','RowGinfo','selectedGinfoRows'])
+  },
+  watch:{
+    selectedGinfoRows(newRow,oldRow){
+      if (newRow != null){
+        this.series = this.dataToChart(newRow);
+
+      }
+    }
+  },
+
 };
 </script>
